@@ -77,6 +77,7 @@ def print_moves(game_id, count=2):
         symbol = move.get("symbol", "-")
         move_coord = move.get("move", "-")
         print(f"{move_id:<8} | {team_id:<6} | {symbol:<6} | {move_coord:<5}")
+    print()
 
 
 
@@ -111,48 +112,91 @@ def print_game_details(game_id):
     print(f"Turn Team:    {game.get('turnteamid')}")
     print(f"Move Count:   {game.get('moves')}")
     print(f"Time per move:{game.get('secondspermove')}s")
+    print()
 
+
+
+
+##### Testing ####
 
 # import json
-# from api_client import get_board_map
-# def print_board_map(game_id):
-#     data = get_board_map(game_id)
-#     if not data or data.get("code") != "OK":
+# from api_client import get_game_details, get_board_map
+
+# # Cache for storing boardsize & target once per game
+# _game_info_cache = {}
+
+# def print_full_board_map(game_id):
+#     """
+#     Uses cached boardsize & target from get_game_details,
+#     then calls get_board_map to get the actual board moves.
+#     Renders the board with the same box style as print_board_string.
+#     """
+
+#     # (A) Check if we have the size/target cached; if not, fetch from game details
+#     if game_id not in _game_info_cache:
+#         details = get_game_details(game_id)
+#         if not details or details.get("code") != "OK":
+#             print("⚠️ Could not fetch game details for board size.")
+#             return
+        
+#         game_raw = details.get("game", "{}")
+#         try:
+#             game_data = json.loads(game_raw)
+#         except json.JSONDecodeError:
+#             print("❌ Could not parse game details JSON.")
+#             return
+
+#         board_size = int(game_data.get("boardsize", 3))
+#         target_val = int(game_data.get("target", 3))
+#         _game_info_cache[game_id] = {"size": board_size, "target": target_val}
+
+#     board_size = _game_info_cache[game_id]["size"]
+#     target_val = _game_info_cache[game_id]["target"]
+
+#     # (B) Now fetch the board map to see the actual placed moves
+#     response = get_board_map(game_id)
+#     if not response or response.get("code") != "OK":
 #         print("⚠️ Failed to fetch board map.")
 #         return
 
-#     # board_dict = data.get("output", {})
+#     # The 'output' is typically a stringified dictionary of moves
 #     try:
-#         board_dict = json.loads(data.get("output", "{}"))
+#         board_dict = json.loads(response.get("output", "{}"))
 #     except json.JSONDecodeError:
 #         print("❌ Failed to decode board map JSON.")
 #         return
-#     target = data.get("target", "?")
 
-#     # Extract board size automatically
-#     coords = [tuple(map(int, key.split(','))) for key in board_dict]
-#     if not coords:
-#         print("⚠️ Board is empty.")
-#         return
+#     # (C) Initialize an NxN board of '-'
+#     board = [["-" for _ in range(board_size)] for _ in range(board_size)]
+    
+#     # (D) Fill in the moves: e.g. {"0,0":"X","0,1":"O", ...}
+#     for pos_str, symbol in board_dict.items():
+#         r, c = map(int, pos_str.split(","))
+#         board[r][c] = symbol
 
-#     max_row = max(r for r, _ in coords)
-#     max_col = max(c for _, c in coords)
+#     # (E) Pretty-print in the same style as print_board_string
+#     cell_width = 3
 
-#     # Build 2D board
-#     board = [['-' for _ in range(max_col + 1)] for _ in range(max_row + 1)]
-#     for pos, val in board_dict.items():
-#         r, c = map(int, pos.split(","))
-#         board[r][c] = val
+#     print(f"\n🧭 Board Map View (Game {game_id}) — Target: {target_val}\n")
 
-#     # Pretty print
-#     print(f"\n🧭 Board Map View (Game {game_id}) — Target: {target}\n")
-#     print("    " + "  ".join(f"{i:>2}" for i in range(max_col + 1)))
-#     print("    " + "+---" * (max_col + 1) + "+")
+#     # Header row: indices across the top
+#     col_header = "    " + "".join(f"{i:>{cell_width}} " for i in range(board_size))
+#     print(col_header)
 
-#     for i, row in enumerate(board):
-#         row_str = " | ".join(row)
-#         print(f"{i:>2} | {row_str} |")
-#         print("    " + "+---" * (max_col + 1) + "+")
+#     # Divider line (like +---+---+...)
+#     divider = "    +" + "+".join(["-" * cell_width] * board_size) + "+"
+
+#     # Print each row
+#     for row_index, row_data in enumerate(board):
+#         print(divider)
+#         row_str = " | ".join(str(cell) for cell in row_data)
+#         print(f"{row_index:>2}  | {row_str} |")
+#     print(divider)
+
+#     print(f"\n🎯 Target to win: {target_val}\n")
+
+
+
 
 
 
@@ -235,11 +279,12 @@ if __name__ == "__main__":
     #         usage_instructions()
     #     else:
     #         try:
-    #             game_id = int(sys.argv[2])
-    #             print_board_map(game_id)
-    #         except (ValueError, IndexError):
+    #             game_id = int(sys.argv[2].strip())
+    #             print_full_board_map(game_id)
+    #         except ValueError:
     #             print("❌ Invalid game ID. Must be an integer.\n")
     #             usage_instructions()
+
 
     # Otherwise, unrecognized option
     else:

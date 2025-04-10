@@ -75,6 +75,8 @@ def get_game_details(game_id):
         print("Raw response:", response.text)
         return None
 
+#### Testing ####
+
 # def get_board_map(game_id):
 #     params = {
 #         "type": "boardMap",
